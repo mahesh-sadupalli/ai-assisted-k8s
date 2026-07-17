@@ -1,0 +1,38 @@
+# --- Secrets / local env ---
+.env
+.env.*
+*.local
+credentials
+*.pem
+*.key
+
+# --- Go ---
+/bin/
+*.exe
+*.test
+*.out
+vendor/
+
+# --- Terraform ---
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+!example.tfvars
+override.tf
+override.tf.json
+
+# --- Kubernetes / local tooling ---
+kubeconfig
+*.kubeconfig
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# --- Claude local settings ---
+.claude/settings.local.json

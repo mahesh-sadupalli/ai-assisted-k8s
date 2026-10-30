@@ -5,6 +5,11 @@
 //	agent scan <namespace>      find unhealthy pods in a namespace and diagnose each
 //	agent plan <plan.json>      review `terraform show -json` output; exit 1 on block
 //	agent deploy-review <report> [diffstat]  assess a deploy; prints Markdown for CI
+//	agent serve                 run the alert responder (Alertmanager webhook on :8080)
+//	agent proposals             list proposals from a running responder
+//	agent approve <id> <name>   approve a proposal as <name> (runs the action)
+//	agent reject <id> <name> [reason]
+//	agent audit <audit.jsonl>   print an audit log and verify its hash chain
 package main
 
 import (
@@ -20,7 +25,7 @@ import (
 )
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: agent summarize <logfile> | pod <namespace> <pod> | scan <namespace> | plan <plan.json> | deploy-review <report> [diffstat]")
+	fmt.Fprintln(os.Stderr, "usage: agent summarize <logfile> | pod <namespace> <pod> | scan <namespace> | plan <plan.json> | deploy-review <report> [diffstat] | serve | proposals | approve <id> <name> | reject <id> <name> [reason] | audit <file>")
 	os.Exit(2)
 }
 
@@ -168,6 +173,20 @@ func main() {
 			fail("deploy review", err)
 		}
 		fmt.Print(r.Markdown())
+	case "serve":
+		serve(client)
+	case "proposals":
+		printProposals()
+	case "approve", "reject":
+		if len(os.Args) < 4 {
+			usage()
+		}
+		decideCmd(os.Args[2], os.Args[3], os.Args[1] == "approve", strings.Join(os.Args[4:], " "))
+	case "audit":
+		if len(os.Args) != 3 {
+			usage()
+		}
+		verifyAuditFile(os.Args[2])
 	default:
 		usage()
 	}

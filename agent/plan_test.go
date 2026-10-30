@@ -59,3 +59,13 @@ func TestSummarySkipsNoop(t *testing.T) {
 		t.Fatalf("unexpected summary:\n%s", s)
 	}
 }
+
+func TestEnforceFindings(t *testing.T) {
+	r := enforceFindings(PlanReview{Verdict: "approve", Findings: []Finding{{Rule: "iam-wildcard"}}})
+	if r.Verdict != "needs_review" {
+		t.Fatalf("rule hit must downgrade approve, got %s", r.Verdict)
+	}
+	if r := enforceFindings(PlanReview{Verdict: "block"}); r.Verdict != "block" {
+		t.Fatalf("block must stay block, got %s", r.Verdict)
+	}
+}

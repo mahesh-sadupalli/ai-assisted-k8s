@@ -1,6 +1,8 @@
 // Command agent is Sentinel's AI reliability agent.
 //
 //	agent summarize <logfile>   diagnose a log file ("-" reads stdin)
+//	agent pod <namespace> <pod> diagnose a live pod (status, events, logs)
+//	agent scan <namespace>      find unhealthy pods in a namespace and diagnose each
 package main
 
 import (
@@ -11,10 +13,11 @@ import (
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/joho/godotenv"
+	"k8s.io/client-go/kubernetes"
 )
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: agent summarize <logfile>")
+	fmt.Fprintln(os.Stderr, "usage: agent summarize <logfile> | pod <namespace> <pod> | scan <namespace>")
 	os.Exit(2)
 }
 
@@ -36,6 +39,24 @@ func printDiagnosis(d Diagnosis) {
 	if d.Pages() {
 		fmt.Println(">> This would page an on-call engineer.")
 	}
+}
+
+func fail(what string, err error) {
+	fmt.Fprintf(os.Stderr, "%s: %v\n", what, err)
+	os.Exit(1)
+}
+
+func diagnosePod(ctx context.Context, client anthropic.Client, cs kubernetes.Interface, ns, pod string) {
+	evidence, err := PodEvidence(ctx, cs, ns, pod)
+	if err != nil {
+		fail("read pod", err)
+	}
+	d, err := Diagnose(ctx, client, evidence)
+	if err != nil {
+		fail("diagnose", err)
+	}
+	fmt.Printf("\n[%s/%s]\n", ns, pod)
+	printDiagnosis(d)
 }
 
 func main() {
@@ -62,6 +83,31 @@ func main() {
 			os.Exit(1)
 		}
 		printDiagnosis(d)
+	case "pod", "scan":
+		cs, err := kubeClient()
+		if err != nil {
+			fail("kubeconfig", err)
+		}
+		if os.Args[1] == "pod" {
+			if len(os.Args) != 4 {
+				usage()
+			}
+			diagnosePod(ctx, client, cs, os.Args[2], os.Args[3])
+			return
+		}
+		if len(os.Args) != 3 {
+			usage()
+		}
+		pods, err := UnhealthyPods(ctx, cs, os.Args[2])
+		if err != nil {
+			fail("list pods", err)
+		}
+		if len(pods) == 0 {
+			fmt.Println("all pods in", os.Args[2], "look healthy")
+		}
+		for _, p := range pods {
+			diagnosePod(ctx, client, cs, p.Namespace, p.Name)
+		}
 	default:
 		usage()
 	}

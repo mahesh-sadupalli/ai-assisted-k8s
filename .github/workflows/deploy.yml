@@ -1,0 +1,92 @@
+name: deploy
+
+# Merge to main -> test gate -> build + push to ECR -> deploy to EKS -> smoke test
+# -> automatic rollback on failure -> agent posts a risk review to the run summary.
+#
+# Repository variables (Settings → Secrets and variables → Actions → Variables):
+#   AWS_ROLE_ARN    terraform output github_deploy_role_arn   (deploy is skipped until set)
+#   AWS_REGION      e.g. eu-central-1
+#   ECR_REGISTRY    terraform output ecr_registry, e.g. 123456789012.dkr.ecr.eu-central-1.amazonaws.com/
+#   EKS_CLUSTER     terraform output cluster_name
+# Claude, preferred: Workload Identity Federation (no stored key)
+#   ANTHROPIC_FEDERATION_RULE_ID, ANTHROPIC_ORGANIZATION_ID, ANTHROPIC_SERVICE_ACCOUNT_ID,
+#   ANTHROPIC_OIDC_AUDIENCE (the audience registered for the GitHub issuer)
+# Claude, fallback: secret ANTHROPIC_API_KEY
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false # never cancel a deploy halfway through
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: test # failing tests block the deploy
+    if: vars.AWS_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # OIDC token for AWS (and Claude WIF)
+    env:
+      IMAGE: ${{ vars.ECR_REGISTRY }}control-plane:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2 # for the diffstat of this release
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        run: |
+          docker build --build-arg CMD=control-plane -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Deploy, smoke test, roll back on failure
+        id: deploy
+        run: |
+          aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER }}" --region "${{ vars.AWS_REGION }}"
+          host=$(kubectl -n ingress-nginx get svc ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          scripts/deploy.sh "$IMAGE" "http://$host"
+
+      - name: Claude credentials (WIF if configured, else API key)
+        if: always() && steps.deploy.outcome != 'skipped'
+        env:
+          AUDIENCE: ${{ vars.ANTHROPIC_OIDC_AUDIENCE }}
+          RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+          FALLBACK_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        # Exactly one credential reaches the agent: a set ANTHROPIC_API_KEY (even empty) would override WIF.
+        run: |
+          if [ -n "$RULE_ID" ]; then
+            curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+              "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUDIENCE" | jq -r .value > "$RUNNER_TEMP/gh-oidc.jwt"
+            {
+              echo "ANTHROPIC_FEDERATION_RULE_ID=$RULE_ID"
+              echo "ANTHROPIC_ORGANIZATION_ID=${{ vars.ANTHROPIC_ORGANIZATION_ID }}"
+              echo "ANTHROPIC_SERVICE_ACCOUNT_ID=${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}"
+              echo "ANTHROPIC_IDENTITY_TOKEN_FILE=$RUNNER_TEMP/gh-oidc.jwt"
+            } >> "$GITHUB_ENV"
+          else
+            echo "ANTHROPIC_API_KEY=$FALLBACK_KEY" >> "$GITHUB_ENV"
+          fi
+
+      - name: Agent deploy review
+        if: always() && steps.deploy.outcome != 'skipped'
+        run: |
+          git diff --shortstat HEAD~1 HEAD > diffstat.txt
+          go run ./agent deploy-review deploy-report.txt diffstat.txt | tee -a "$GITHUB_STEP_SUMMARY"

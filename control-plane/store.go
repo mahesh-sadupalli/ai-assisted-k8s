@@ -55,3 +55,13 @@ func (s *Store) Get(id string) (Deployment, bool) {
 	d, ok := s.deployments[id]
 	return d, ok
 }
+
+// SetStatus updates the status of a stored deployment.
+func (s *Store) SetStatus(id, status string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if d, ok := s.deployments[id]; ok {
+		d.Status = status
+		s.deployments[id] = d
+	}
+}

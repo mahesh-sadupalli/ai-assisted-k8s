@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -8,15 +9,21 @@ import (
 	"time"
 )
 
+// Applier rolls an accepted deployment out to a cluster. Nil means "record only" (M1 mode).
+type Applier interface {
+	Apply(ctx context.Context, d Deployment) error
+}
+
 // Server is the control-plane HTTP API.
 type Server struct {
 	store     *Store
 	guardrail Guardrail
+	applier   Applier
 	log       *slog.Logger
 }
 
-func NewServer(store *Store, g Guardrail, log *slog.Logger) *Server {
-	return &Server{store: store, guardrail: g, log: log}
+func NewServer(store *Store, g Guardrail, applier Applier, log *slog.Logger) *Server {
+	return &Server{store: store, guardrail: g, applier: applier, log: log}
 }
 
 func (s *Server) Routes() http.Handler {
@@ -68,6 +75,19 @@ func (s *Server) createDeployment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.log.Info("deployment accepted", "id", d.ID, "name", d.Name, "namespace", d.Namespace, "image", d.Image)
+
+	if s.applier != nil {
+		if err := s.applier.Apply(r.Context(), d); err != nil {
+			s.log.Error("apply failed", "id", d.ID, "err", err)
+			d.Status = "apply_failed"
+			s.store.SetStatus(d.ID, d.Status)
+			writeJSON(w, http.StatusBadGateway, d)
+			return
+		}
+		d.Status = "applied"
+		s.store.SetStatus(d.ID, d.Status)
+		s.log.Info("deployment applied", "id", d.ID, "namespace", d.Namespace)
+	}
 	writeJSON(w, http.StatusCreated, d)
 }
 

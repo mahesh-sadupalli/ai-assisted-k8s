@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -10,10 +12,16 @@ import (
 	"testing"
 )
 
-func newTestServer() *httptest.Server {
+type fakeApplier struct{ err error }
+
+func (f fakeApplier) Apply(context.Context, Deployment) error { return f.err }
+
+func newTestServerWith(a Applier) *httptest.Server {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return httptest.NewServer(NewServer(NewStore(), testGuardrail(), log).Routes())
+	return httptest.NewServer(NewServer(NewStore(), testGuardrail(), a, log).Routes())
 }
+
+func newTestServer() *httptest.Server { return newTestServerWith(nil) }
 
 func post(t *testing.T, ts *httptest.Server, body string) (*http.Response, map[string]any) {
 	t.Helper()
@@ -88,5 +96,27 @@ func TestGetMissing(t *testing.T) {
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("want 404, got %d", resp.StatusCode)
+	}
+}
+
+func TestCreateApplies(t *testing.T) {
+	tests := []struct {
+		name       string
+		applier    Applier
+		wantCode   int
+		wantStatus string
+	}{
+		{"applied", fakeApplier{}, http.StatusCreated, "applied"},
+		{"apply fails", fakeApplier{err: errors.New("cluster down")}, http.StatusBadGateway, "apply_failed"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := newTestServerWith(tt.applier)
+			defer ts.Close()
+			resp, out := post(t, ts, goodBody)
+			if resp.StatusCode != tt.wantCode || out["status"] != tt.wantStatus {
+				t.Fatalf("want %d/%s, got %d/%v", tt.wantCode, tt.wantStatus, resp.StatusCode, out["status"])
+			}
+		})
 	}
 }

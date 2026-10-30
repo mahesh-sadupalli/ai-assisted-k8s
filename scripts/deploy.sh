@@ -41,7 +41,9 @@ if [[ $ok == 1 ]]; then
 fi
 
 log "result: FAILED, rolling back to $previous"
+log "pods of the failed release (before rollback):"
 kubectl -n "$NS" get pods -l "app=$DEPLOY" 2>&1 | tee -a "$REPORT"
 kubectl -n "$NS" rollout undo "deployment/$DEPLOY" | tee -a "$REPORT"
 kubectl -n "$NS" rollout status "deployment/$DEPLOY" --timeout=120s | tee -a "$REPORT"
+log "after rollback: $(kubectl -n "$NS" get deploy "$DEPLOY" -o jsonpath='{.spec.template.spec.containers[0].image}')"
 exit 1

@@ -1,0 +1,16 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.17.1",
+  "resource_changes": [
+    {
+      "address": "aws_ecr_repository.app[\"hello\"]",
+      "type": "aws_ecr_repository",
+      "change": {"actions": ["update"], "before": {"tags": {}}, "after": {"tags": {"team": "a"}}}
+    },
+    {
+      "address": "aws_s3_bucket.logs",
+      "type": "aws_s3_bucket",
+      "change": {"actions": ["no-op"], "before": {"bucket": "logs"}, "after": {"bucket": "logs"}}
+    }
+  ]
+}

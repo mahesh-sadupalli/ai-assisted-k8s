@@ -24,6 +24,19 @@ func TestGuardrailRegistry(t *testing.T) {
 	}
 }
 
+func TestGuardrailLookupWins(t *testing.T) {
+	g := testGuardrail()
+	g.Lookup = func(ns string) (Quota, bool) { return Quota{CPUMillis: 100, MemoryMiB: 100}, ns == "team-a" }
+	if err := g.Check(validRequest(), nil); err == nil || !strings.Contains(err.Error(), "CPU quota") {
+		t.Fatalf("want lookup quota to reject, got %v", err)
+	}
+	r := validRequest()
+	r.Namespace = "team-b" // lookup says no quota there -> default applies
+	if err := g.Check(r, nil); err != nil {
+		t.Fatalf("want default quota to allow, got %v", err)
+	}
+}
+
 func TestGuardrailQuota(t *testing.T) {
 	g := testGuardrail()
 	running := []Deployment{{DeploymentRequest: DeploymentRequest{

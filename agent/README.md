@@ -7,8 +7,14 @@ Every action is auditable; any state-changing remediation is gated behind human 
 
 ```bash
 export ANTHROPIC_API_KEY=...        # or put it in .env
-go run ./agent summarize agent/testdata/oomkilled.log
+go run ./agent summarize agent/testdata/oomkilled.log   # M1: a log file
+go run ./agent pod team-a <pod>                         # M2: one live pod
+go run ./agent scan team-a                              # M2: every unhealthy pod in a namespace
 ```
+
+`pod`/`scan` use your kubeconfig, like kubectl. For each pod the agent collects status,
+limits, last termination reason, events and the last 50 log lines (including the **previous,
+crashed** container's), then diagnoses it.
 
 The model answers by calling a `report_diagnosis` tool with a **strict** JSON schema
 (`severity`, `what_broke`, `likely_cause`, `suggested_action`), so the output is always

@@ -6,7 +6,7 @@
 
 **A self-service Kubernetes platform where reliability is observable end-to-end — and an AI agent turns metrics and logs into triaged, auditable fixes.**
 
-![Status](https://img.shields.io/badge/status-Milestone%201%20in%20progress-orange)
+![Status](https://img.shields.io/badge/status-Milestone%203%20in%20progress-orange)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Go](https://img.shields.io/badge/Go-00ADD8?logo=go&logoColor=white)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=white)

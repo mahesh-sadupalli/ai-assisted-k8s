@@ -36,3 +36,9 @@ Thumbs.db
 
 # --- Claude local settings ---
 .claude/settings.local.json
+
+# --- Deploy artifacts ---
+deploy-report.txt
+plan.out
+plan.json
+infra/terraform/backend.hcl

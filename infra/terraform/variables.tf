@@ -27,3 +27,9 @@ variable "ecr_repositories" {
   type    = list(string)
   default = ["control-plane", "hello"]
 }
+
+variable "github_repo" {
+  description = "owner/name allowed to deploy via GitHub Actions OIDC"
+  type        = string
+  default     = "mahesh-sadupalli/ai-assisted-k8s"
+}

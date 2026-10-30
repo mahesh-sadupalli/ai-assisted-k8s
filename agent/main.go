@@ -4,6 +4,7 @@
 //	agent pod <namespace> <pod> diagnose a live pod (status, events, logs)
 //	agent scan <namespace>      find unhealthy pods in a namespace and diagnose each
 //	agent plan <plan.json>      review `terraform show -json` output; exit 1 on block
+//	agent deploy-review <report> [diffstat]  assess a deploy; prints Markdown for CI
 package main
 
 import (
@@ -19,7 +20,7 @@ import (
 )
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: agent summarize <logfile> | pod <namespace> <pod> | scan <namespace> | plan <plan.json>")
+	fmt.Fprintln(os.Stderr, "usage: agent summarize <logfile> | pod <namespace> <pod> | scan <namespace> | plan <plan.json> | deploy-review <report> [diffstat]")
 	os.Exit(2)
 }
 
@@ -148,6 +149,25 @@ func main() {
 		if r.Verdict == "block" {
 			os.Exit(1) // lets CI fail the PR check
 		}
+	case "deploy-review":
+		if len(os.Args) < 3 || len(os.Args) > 4 {
+			usage()
+		}
+		report, err := readInput(os.Args[2])
+		if err != nil {
+			fail("read report", err)
+		}
+		var stat string
+		if len(os.Args) == 4 {
+			if stat, err = readInput(os.Args[3]); err != nil {
+				fail("read diffstat", err)
+			}
+		}
+		r, err := ReviewDeploy(ctx, client, report, stat)
+		if err != nil {
+			fail("deploy review", err)
+		}
+		fmt.Print(r.Markdown())
 	default:
 		usage()
 	}

@@ -16,6 +16,8 @@ type Guardrail struct {
 	AllowedRegistries []string // image must start with one of these, e.g. "ghcr.io/mahesh-sadupalli/"
 	DefaultQuota      Quota
 	Quotas            map[string]Quota // per-namespace override
+	// Lookup, if set, is asked first, e.g. to read the namespace's ResourceQuota from the cluster.
+	Lookup func(ns string) (Quota, bool)
 }
 
 // PolicyError is a request that is well-formed but not allowed.
@@ -24,6 +26,11 @@ type PolicyError struct{ Reason string }
 func (e *PolicyError) Error() string { return "rejected by guardrail: " + e.Reason }
 
 func (g Guardrail) quotaFor(ns string) Quota {
+	if g.Lookup != nil {
+		if q, ok := g.Lookup(ns); ok {
+			return q
+		}
+	}
 	if q, ok := g.Quotas[ns]; ok {
 		return q
 	}

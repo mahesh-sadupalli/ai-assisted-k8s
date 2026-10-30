@@ -2,8 +2,17 @@
 
 **AI reliability agent · grows M1 → M5**
 
-The spine of the project. Built on the Claude API directly (function calling / tool use).
+The spine of the project. Built on the Claude API directly (tool use).
 Every action is auditable; any state-changing remediation is gated behind human approval.
+
+```bash
+export ANTHROPIC_API_KEY=...        # or put it in .env
+go run ./agent summarize agent/testdata/oomkilled.log
+```
+
+The model answers by calling a `report_diagnosis` tool with a **strict** JSON schema
+(`severity`, `what_broke`, `likely_cause`, `suggested_action`), so the output is always
+parseable. No more stripping markdown fences.
 
 Capability by milestone:
 
@@ -14,5 +23,3 @@ Capability by milestone:
 | M3 | Review a `terraform plan`, flag risky changes |
 | M4 | Watch CI/CD, flag risky deploys, suggest rollback |
 | M5 | Full loop: Prometheus alert → triage → auditable remediation |
-
-> Starts at M1 with the log summarizer.

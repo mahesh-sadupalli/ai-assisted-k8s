@@ -1,0 +1,13 @@
+Name:          payment-service-7d9f8b6c4-xk2lp
+Namespace:     production
+Status:        Running
+Restart Count: 5
+Last State:    Terminated
+  Reason:      OOMKilled
+  Exit Code:   137
+Limits:
+  memory:      128Mi
+Events:
+  Warning  BackOff  Back-off restarting failed container payment-service
+2026-10-30T06:01:12Z INFO  loading product catalog into cache (48213 items)
+2026-10-30T06:01:14Z WARN  heap usage 121Mi / 128Mi

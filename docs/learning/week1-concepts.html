@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sentinel — Day 1 · Foundations</title>
+<style>
+  :root{--ink:#1b2330;--muted:#5c6675;--line:#e7ebf1;--bg:#eef1f6;--navy:#003C7D;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg);font-size:16.5px;line-height:1.7;}
+  .layout{display:flex;align-items:flex-start;min-height:100vh;}
+
+  /* ---- sidebar ---- */
+  nav.side{width:280px;flex:0 0 280px;background:var(--navy);color:#cdddf0;
+    position:sticky;top:0;height:100vh;overflow-y:auto;padding:0 0 30px;}
+  .brand{padding:26px 22px 20px;border-bottom:1px solid rgba(255,255,255,0.15);}
+  .brand b{display:block;color:#fff;font-size:19px;letter-spacing:-0.2px;}
+  .brand span{display:block;color:#9fc0e6;font-size:12.5px;margin-top:4px;}
+  .side a.navitem{display:block;text-decoration:none;border-left:4px solid transparent;
+    color:#cdddf0;padding:11px 18px;font-size:14px;line-height:1.4;}
+  .side a.navitem:hover{background:rgba(255,255,255,0.08);color:#fff;}
+  .side a.navitem.active{background:rgba(255,255,255,0.14);color:#fff;border-left-color:var(--c,#8fb2da);font-weight:600;}
+  .side a.navitem .n{display:inline-block;width:22px;color:#7fa6d6;font-weight:700;}
+
+  /* ---- main ---- */
+  main{flex:1;padding:0 34px 120px;}
+  .doc{max-width:860px;margin:0 auto;}
+  .pagehead{padding:40px 0 10px;}
+  .pagehead h1{font-size:30px;color:var(--navy);margin:0 0 6px;letter-spacing:-0.5px;}
+  .pagehead p{font-size:15.5px;color:var(--muted);margin:0;}
+
+  section.blk{background:#fff;border:1px solid #dfe4ec;border-radius:12px;
+    padding:32px 38px 34px;margin:26px 0;box-shadow:0 2px 10px rgba(20,40,80,0.05);scroll-margin-top:20px;}
+  section.blk h2{display:flex;align-items:center;gap:12px;font-size:22px;color:var(--c);margin:0 0 6px;letter-spacing:-0.3px;}
+  section.blk h2 .bar{width:7px;height:26px;border-radius:4px;background:var(--c);}
+  section.blk h2 .n{font-size:13px;font-weight:700;color:#fff;background:var(--c);border-radius:20px;padding:3px 11px;margin-left:auto;}
+  section.blk > .lead{font-size:16px;color:#3a4453;margin:2px 0 20px;}
+
+  .label{font-size:11.5px;text-transform:uppercase;letter-spacing:1.3px;color:var(--c);
+    font-weight:800;margin:22px 0 7px;}
+  p{margin:11px 0;}
+  .analogy{background:#f6f9fc;border:1px solid #e6edf5;border-radius:9px;padding:13px 17px;margin:14px 0;font-size:15.5px;color:#2a3644;}
+  .analogy b{color:var(--c);}
+
+  ul.pts{margin:8px 0;padding-left:0;list-style:none;}
+  ul.pts li{position:relative;padding:7px 0 7px 26px;font-size:15.5px;border-bottom:1px dashed var(--line);}
+  ul.pts li:last-child{border-bottom:none;}
+  ul.pts li::before{content:"\25B8";position:absolute;left:5px;top:7px;color:var(--c);}
+  ul.pts li b{color:#1b2330;}
+
+  table.cmp{width:100%;border-collapse:collapse;margin:16px 0 8px;font-size:14.5px;}
+  table.cmp th,table.cmp td{border:1px solid #e4e8ef;padding:9px 12px;text-align:left;vertical-align:top;}
+  table.cmp th{background:#f4f8fc;color:var(--navy);font-weight:700;font-size:13.5px;}
+  table.cmp tr:nth-child(even) td{background:#fafbfd;}
+  table.cmp td b{color:var(--c);}
+
+  pre{background:#0f1826;color:#d7e3f4;border-radius:9px;padding:15px 17px;overflow-x:auto;
+    font-size:13.5px;line-height:1.55;font-family:ui-monospace,Menlo,Consolas,monospace;margin:13px 0;}
+  pre .cm{color:#6f89ad;} pre .kw{color:#7bb0ff;} pre .st{color:#9be7a6;} pre .fn{color:#f2c37b;}
+  code{background:#eef1f6;padding:2px 7px;border-radius:5px;font-size:14px;font-family:ui-monospace,Menlo,Consolas,monospace;}
+
+  .note{font-size:14.5px;background:#fdf3e7;border:1px solid #f3dcbb;border-left:4px solid #E08A1E;
+    border-radius:8px;padding:12px 16px;margin:16px 0;color:#7a4d12;}
+  .note b{color:#8a4b0a;}
+  .ref{font-size:13.5px;background:#f7f9fc;border:1px solid #e8edf4;border-radius:8px;
+    padding:10px 14px;margin:18px 0 0;color:#3a4453;}
+  .ref .rl{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;font-weight:800;color:var(--c);display:block;margin-bottom:3px;}
+  .ref b{color:var(--navy);}
+
+  .viz{margin:18px 0 6px;text-align:center;background:#fcfdfe;border:1px solid #eef1f6;border-radius:11px;padding:18px 14px;}
+  .viz svg{max-width:100%;height:auto;}
+  .viz .cap{font-size:13px;color:var(--muted);margin-top:8px;}
+
+  /* ---- test ---- */
+  section.test{background:#faf8fd;border:1px solid #e5dcf3;}
+  section.test h2{color:#7A4FBF;}
+  .qitem{border-top:1px solid #ece4f7;padding:15px 0;}
+  .qitem:first-of-type{border-top:none;}
+  .qq{font-weight:600;font-size:16px;} .qq b{color:#7A4FBF;margin-right:7px;}
+  .reveal{margin-top:9px;font-size:13px;font-weight:700;color:#fff;background:#7A4FBF;
+    border:none;border-radius:7px;padding:6px 14px;cursor:pointer;opacity:.92;}
+  .reveal:hover{opacity:1;}
+  .ans{display:none;margin-top:11px;padding:13px 16px;background:#fff;border:1px solid #e8e0f5;
+    border-radius:8px;font-size:15px;color:#2a2140;}
+  .ans.show{display:block;}
+  .ans code{background:#f0ecfa;}
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="side">
+    <div class="brand"><b>Sentinel</b><span>Day 1 &#183; Foundations</span></div>
+    <a class="navitem active" href="#s0" style="--c:#003C7D"><span class="n">0</span>The goal of the project</a>
+    <a class="navitem" href="#s1" style="--c:#2E6CB5"><span class="n">1</span>Why Go, not Python?</a>
+    <a class="navitem" href="#s2" style="--c:#1390A8"><span class="n">2</span>The cloud &amp; why AWS</a>
+    <a class="navitem" href="#s3" style="--c:#0f6f82"><span class="n">3</span>How we access AWS</a>
+    <a class="navitem" href="#s4" style="--c:#E08A1E"><span class="n">4</span>Docker &amp; containers</a>
+    <a class="navitem" href="#s5" style="--c:#1E9E6A"><span class="n">5</span>Kubernetes</a>
+    <a class="navitem" href="#s6" style="--c:#7A4FBF"><span class="n">6</span>LLMs &amp; AI agents</a>
+    <a class="navitem" href="#s7" style="--c:#C2185B"><span class="n">7</span>How it all fits together</a>
+    <a class="navitem" href="#s8" style="--c:#7A4FBF"><span class="n">8</span>Test yourself</a>
+  </nav>
+
+  <main>
+  <div class="doc">
+    <div class="pagehead">
+      <h1>Day 1 &#8212; Foundations</h1>
+      <p>Before we write a single line of code, we build the mental model. Every section answers three questions: <b>what it is</b>, <b>why we need it</b>, and <b>how it works</b>.</p>
+    </div>
+
+    <!-- ============ 0 · GOAL ============ -->
+    <section id="s0" class="blk" style="--c:#003C7D">
+      <h2><span class="bar"></span>The goal of the project<span class="n">0</span></h2>
+      <p class="lead">Let's be completely clear about what we are building and why, in plain language, before anything else.</p>
+
+      <div class="label">What we are building</div>
+      <p>A <b>self-service platform</b> called <b>Sentinel</b>. A developer sends one request &#8212; "please run my service" &#8212; and the platform deploys it onto a cluster of machines, keeps it running, watches its health, and, when something breaks, an <b>AI agent reads the logs and metrics and explains what went wrong and what to do about it</b>.</p>
+
+      <div class="analogy"><b>Think of a large office building.</b> Developers are tenants who want to move in (deploy their app). The <b>control-plane</b> is the front desk that takes the request and checks the rules. <b>Kubernetes</b> is the building's operations crew that actually runs everything day to day. <b>Observability</b> is the CCTV and sensors watching every room. The <b>AI agent</b> is a smart guard who watches all those sensors so that, when a pipe bursts, it tells you "pipe burst in room 3, here's how to shut the valve" &#8212; instead of you personally watching 200 cameras.</div>
+
+      <div class="label">Why this project is relevant</div>
+      <p>We are aiming at an <b>infrastructure / observability platform engineering</b> role (Grafana Labs and similar). That kind of team wants an engineer who can write real backend services in <b>Go</b>, run them on the <b>cloud</b> with <b>Kubernetes</b>, watch them with <b>observability</b> tools, and &#8212; increasingly &#8212; use <b>AI</b> to help operate them. Instead of doing five disconnected tutorials, we build <b>one system that touches all of it</b>. That is a far stronger thing to show than a pile of unrelated exercises.</p>
+
+      <div class="label">How it works, end to end</div>
+      <div class="viz">
+        <svg viewBox="0 0 820 240" role="img"><title>project overview</title>
+          <defs><marker id="ar" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><polygon points="0 0,7 3,0 6" fill="#8a93a2"/></marker></defs>
+          <rect x="24" y="96" width="120" height="52" rx="9" fill="#eef3f9" stroke="#003C7D" stroke-width="1.6"/>
+          <text x="84" y="118" text-anchor="middle" font-size="12.5" font-weight="700" fill="#003C7D" font-family="sans-serif">Developer</text>
+          <text x="84" y="135" text-anchor="middle" font-size="10" fill="#5c6675" font-family="sans-serif">"run my service"</text>
+          <rect x="190" y="90" width="150" height="64" rx="9" fill="#eaf1fa" stroke="#2E6CB5" stroke-width="1.8"/>
+          <text x="265" y="112" text-anchor="middle" font-size="12.5" font-weight="800" fill="#2E6CB5" font-family="sans-serif">Control plane</text>
+          <text x="265" y="129" text-anchor="middle" font-size="10" fill="#5c6675" font-family="sans-serif">Go API &#183; checks rules</text>
+          <text x="265" y="143" text-anchor="middle" font-size="10" fill="#5c6675" font-family="sans-serif">(what we build first)</text>
+          <rect x="392" y="90" width="150" height="64" rx="9" fill="#eef6ef" stroke="#1E9E6A" stroke-width="1.8"/>
+          <text x="467" y="112" text-anchor="middle" font-size="12.5" font-weight="800" fill="#16663c" font-family="sans-serif">Kubernetes</text>
+          <text x="467" y="129" text-anchor="middle" font-size="10" fill="#5c6675" font-family="sans-serif">runs the containers</text>
+          <text x="467" y="143" text-anchor="middle" font-size="10" fill="#5c6675" font-family="sans-serif">on AWS (EKS)</text>
+          <rect x="594" y="46" width="150" height="54" rx="9" fill="#e6f4f7" stroke="#1390A8" stroke-width="1.8"/>
+          <text x="669" y="68" text-anchor="middle" font-size="12" font-weight="800" fill="#0f6f82" font-family="sans-serif">Observability</text>
+          <text x="669" y="85" text-anchor="middle" font-size="10" fill="#5c6675" font-family="sans-serif">metrics + logs</text>
+          <rect x="594" y="144" width="150" height="60" rx="9" fill="#efe9fb" stroke="#7A4FBF" stroke-width="1.8"/>
+          <text x="669" y="166" text-anchor="middle" font-size="12" font-weight="800" fill="#5b3aa0" font-family="sans-serif">AI agent</text>
+          <text x="669" y="182" text-anchor="middle" font-size="10" fill="#5c6675" font-family="sans-serif">reads signals,</text>
+          <text x="669" y="196" text-anchor="middle" font-size="10" fill="#5c6675" font-family="sans-serif">explains &amp; suggests</text>
+          <line x1="144" y1="122" x2="188" y2="122" stroke="#8a93a2" stroke-width="2" marker-end="url(#ar)"/>
+          <line x1="340" y1="122" x2="390" y2="122" stroke="#8a93a2" stroke-width="2" marker-end="url(#ar)"/>
+          <line x1="542" y1="110" x2="592" y2="80" stroke="#8a93a2" stroke-width="2" marker-end="url(#ar)"/>
+          <line x1="669" y1="100" x2="669" y2="142" stroke="#8a93a2" stroke-width="2" marker-end="url(#ar)"/>
+          <line x1="594" y1="180" x2="468" y2="156" stroke="#7A4FBF" stroke-width="1.8" stroke-dasharray="6 5" marker-end="url(#ar)"/>
+          <text x="520" y="176" font-size="9.5" fill="#7A4FBF" font-family="sans-serif">suggests fixes</text>
+        </svg>
+        <div class="cap">One request flows left to right; the AI agent watches the whole thing and closes the loop back.</div>
+      </div>
+      <p>In one sentence: <b>a developer asks &#8594; the Go control-plane validates and forwards it &#8594; Kubernetes runs it on AWS &#8594; observability watches it &#8594; the AI agent turns raw signals into a plain-English diagnosis.</b> Everything in Day 1 below is one piece of this picture.</p>
+    </section>
+
+    <!-- ============ 1 · GO vs PYTHON ============ -->
+    <section id="s1" class="blk" style="--c:#2E6CB5">
+      <h2><span class="bar"></span>Why Go, not Python?<span class="n">1</span></h2>
+      <p class="lead">You already know Python. So the first honest question is: why learn a second language at all?</p>
+
+      <div class="label">What Go is</div>
+      <p><b>Go</b> (also called Golang) is a programming language created at Google to build fast, reliable <b>servers and command-line tools</b>. It is <b>compiled</b> and <b>statically typed</b> &#8212; two words we'll unpack in a second.</p>
+
+      <div class="label">The key idea: compiled vs interpreted</div>
+      <p>This is the difference that explains almost everything else.</p>
+      <ul class="pts">
+        <li><b>Python is interpreted.</b> Another program (the Python interpreter) reads your code line by line <em>while it runs</em>. Flexible and quick to write, but slower to execute, and the machine needs Python installed to run it.</li>
+        <li><b>Go is compiled.</b> A compiler translates your <em>whole</em> program into raw machine code <em>ahead of time</em>, producing a single file (a "binary"). It runs fast and needs nothing else installed &#8212; not even Go.</li>
+      </ul>
+      <div class="analogy"><b>An analogy:</b> Python is a live interpreter at a meeting, translating each sentence as it's spoken &#8212; flexible, but there's a person in the loop every time. Go is a fully translated book, printed once &#8212; you hand someone the book and they read it at full speed with no translator present.</div>
+
+      <div class="label">Why we need Go here specifically</div>
+      <ul class="pts">
+        <li><b>It is the native language of cloud infrastructure.</b> Kubernetes, Docker, Terraform, Prometheus, and Grafana are <em>all written in Go</em>. To work on infrastructure platforms, Go is the language the whole field already speaks.</li>
+        <li><b>It's perfect for containers.</b> A Go program compiles to one tiny self-contained binary. That makes a container image small, and the service starts in milliseconds using little memory.</li>
+        <li><b>Concurrency is built in.</b> Handling thousands of requests at once is native to Go (we'll meet "goroutines" later). A control-plane API needs exactly this.</li>
+        <li><b>Static typing catches mistakes early.</b> Types are checked when you compile, so many bugs are caught before the program ever runs &#8212; safer for production services.</li>
+      </ul>
+
+      <table class="cmp">
+        <tr><th>&#160;</th><th>Python</th><th>Go</th></tr>
+        <tr><td><b>Runs by</b></td><td>Interpreted line by line</td><td>Compiled to one binary</td></tr>
+        <tr><td><b>Typing</b></td><td>Dynamic (checked at run time)</td><td>Static (checked at compile time)</td></tr>
+        <tr><td><b>Speed / memory</b></td><td>Slower, heavier</td><td>Fast, light</td></tr>
+        <tr><td><b>Concurrency</b></td><td>Harder (GIL limits threads)</td><td>Built-in, easy (goroutines)</td></tr>
+        <tr><td><b>Best at</b></td><td>AI/ML, data, scripting, glue</td><td>Servers, CLIs, cloud infra</td></tr>
+      </table>
+
+      <div class="note"><b>We use both, on purpose.</b> The concurrent platform service is written in <b>Go</b> (its home turf). The <b>AI agent stays in Python</b>, because Python is where the AI ecosystem lives (the Anthropic SDK, ML tooling). Each language does the job it's strongest at &#8212; that's a deliberate engineering choice, not indecision.</div>
+
+      <div class="ref"><span class="rl">Reference</span> <b>GOPL</b> (<i>The Go Programming Language</i>, Donovan &amp; Kernighan), Chapter&#160;1 &#8212; the tutorial. Read 1.1&#8211;1.4. It's the clearest introduction there is.</div>
+    </section>
+
+    <!-- ============ 2 · CLOUD & AWS ============ -->
+    <section id="s2" class="blk" style="--c:#1390A8">
+      <h2><span class="bar"></span>The cloud &amp; why AWS<span class="n">2</span></h2>
+      <p class="lead">Everything we build runs "in the cloud". So: what is that, really, and why AWS?</p>
+
+      <div class="label">What "the cloud" is</div>
+      <p>The cloud is simply <b>renting other people's computers over the internet</b>, instead of buying and running your own. A provider owns huge data centers full of machines; you rent exactly what you need, for as long as you need it, and pay for usage. When you're done, you give it back and stop paying.</p>
+      <div class="analogy"><b>An analogy:</b> owning servers is like buying a car &#8212; big upfront cost, you maintain it, it sits idle most of the time. The cloud is like a taxi/rental &#8212; you summon a car when you need one, pay per trip, and never worry about parking or repairs.</div>
+
+      <div class="label">Why we need it</div>
+      <ul class="pts">
+        <li><b>No upfront hardware.</b> You get a cluster of machines in minutes, not weeks.</li>
+        <li><b>Elastic.</b> Need 10 machines today and 100 tomorrow? Scale up and back down; pay only for what ran.</li>
+        <li><b>Managed services.</b> The provider runs the hard parts for you &#8212; including managed Kubernetes, which we'll use.</li>
+      </ul>
+
+      <div class="label">Why AWS specifically</div>
+      <ul class="pts">
+        <li><b>It's the biggest, most in-demand provider.</b> Most infra job postings list AWS. It's the safest bet for the r&#233;sum&#233;.</li>
+        <li><b>It has managed Kubernetes</b> (a service called <b>EKS</b>), so we don't have to run the hard bits of Kubernetes ourselves.</li>
+        <li><b>You already have some AWS and Terraform background</b> &#8212; we build on what you know.</li>
+      </ul>
+
+      <div class="label">The AWS services we'll actually touch</div>
+      <table class="cmp">
+        <tr><th>Service</th><th>In plain words</th></tr>
+        <tr><td><b>EC2</b></td><td>Virtual computers (servers) you rent by the hour.</td></tr>
+        <tr><td><b>EKS</b></td><td>Managed Kubernetes &#8212; AWS runs the Kubernetes "brain" for you.</td></tr>
+        <tr><td><b>ECR</b></td><td>A private store for your container images (like a warehouse for the boxes).</td></tr>
+        <tr><td><b>VPC</b></td><td>Your own private network inside AWS.</td></tr>
+        <tr><td><b>IAM</b></td><td>Who is allowed to do what (permissions and identity).</td></tr>
+      </table>
+
+      <div class="label">One more idea: regions</div>
+      <p>AWS has data centers all over the world, grouped into <b>regions</b> (for example <code>eu-central-1</code> is Frankfurt). You pick a region close to your users. Each region is split into isolated <b>availability zones</b> for resilience &#8212; if one zone has a problem, the others keep running.</p>
+
+      <div class="ref"><span class="rl">Reference</span> <b>AWS Cloud101</b> (in your <code>Books/AWS/Cloud101</code>) &#8212; skim the "what is cloud / regions / core services" material. Your <i>Navigating Linux</i> PDF is worth having open too, since the servers you rent run Linux.</div>
+    </section>
+
+    <!-- ============ 3 · ACCESS AWS ============ -->
+    <section id="s3" class="blk" style="--c:#0f6f82">
+      <h2><span class="bar"></span>How we access AWS<span class="n">3</span></h2>
+      <p class="lead">You rented the machines &#8212; now, concretely, how do you actually reach and control them?</p>
+
+      <div class="label">First: identity (IAM)</div>
+      <p>Everything in AWS is gated by <b>IAM</b> (Identity and Access Management). When you create an account you get a <b>root user</b> &#8212; all-powerful, and you almost never use it. Instead you create <b>IAM users</b> and <b>roles</b> with only the permissions they need. This is the principle of <b>least privilege</b>: give each identity the smallest set of powers that gets the job done.</p>
+
+      <div class="label">Three ways to interact with AWS</div>
+      <div class="viz">
+        <svg viewBox="0 0 780 210" role="img"><title>ways to access AWS</title>
+          <defs><marker id="ar3" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><polygon points="0 0,7 3,0 6" fill="#8a93a2"/></marker></defs>
+          <rect x="30" y="30" width="200" height="46" rx="9" fill="#e6f4f7" stroke="#0f6f82"/>
+          <text x="130" y="51" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0f6f82" font-family="sans-serif">1 &#183; Web Console</text>
+          <text x="130" y="67" text-anchor="middle" font-size="10" fill="#5c6675" font-family="sans-serif">click in the browser</text>
+          <rect x="30" y="86" width="200" height="46" rx="9" fill="#e6f4f7" stroke="#0f6f82"/>
+          <text x="130" y="107" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0f6f82" font-family="sans-serif">2 &#183; AWS CLI</text>
+          <text x="130" y="123" text-anchor="middle" font-size="10" fill="#5c6675" font-family="sans-serif">aws ... in a terminal</text>
+          <rect x="30" y="142" width="200" height="46" rx="9" fill="#e6f4f7" stroke="#0f6f82"/>
+          <text x="130" y="163" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0f6f82" font-family="sans-serif">3 &#183; Terraform (code)</text>
+          <text x="130" y="179" text-anchor="middle" font-size="10" fill="#5c6675" font-family="sans-serif">infra as code</text>
+          <rect x="470" y="70" width="270" height="80" rx="11" fill="#eef3f9" stroke="#003C7D" stroke-width="1.8"/>
+          <text x="605" y="98" text-anchor="middle" font-size="14" font-weight="800" fill="#003C7D" font-family="sans-serif">AWS</text>
+          <text x="605" y="118" text-anchor="middle" font-size="10.5" fill="#5c6675" font-family="sans-serif">EC2 &#183; EKS &#183; ECR &#183; VPC &#183; IAM</text>
+          <text x="605" y="135" text-anchor="middle" font-size="9.5" fill="#8a93a2" font-family="sans-serif">every request checked by IAM</text>
+          <line x1="230" y1="53" x2="468" y2="95" stroke="#8a93a2" stroke-width="2" marker-end="url(#ar3)"/>
+          <line x1="230" y1="109" x2="468" y2="109" stroke="#8a93a2" stroke-width="2" marker-end="url(#ar3)"/>
+          <line x1="230" y1="165" x2="468" y2="125" stroke="#8a93a2" stroke-width="2" marker-end="url(#ar3)"/>
+        </svg>
+        <div class="cap">Same AWS underneath &#8212; three ways in. Console to learn and look, CLI to automate, Terraform to build repeatably.</div>
+      </div>
+      <ul class="pts">
+        <li><b>Web Console</b> &#8212; a website where you click to create things. Best for learning and looking around.</li>
+        <li><b>AWS CLI</b> &#8212; type commands like <code>aws s3 ls</code> in your terminal. You configure it once with <code>aws configure</code>, giving it an <b>access key</b> (an ID + secret) tied to an IAM user. Best for automation.</li>
+        <li><b>Terraform (Infrastructure as Code)</b> &#8212; you <em>describe</em> the infrastructure you want in files, and Terraform creates it. Repeatable, reviewable, and the way real teams work. This is our path for M3.</li>
+      </ul>
+
+      <div class="label">Reaching an actual server: SSH</div>
+      <p>When you rent a virtual server (an EC2 machine), you get into its terminal with <b>SSH</b> (Secure Shell) &#8212; an encrypted remote login. You hold a private <b>key file</b>; the server holds the matching public key; only you can connect:</p>
+      <pre><span class="cm"># connect to a Linux server by its address, using your key</span>
+ssh -i my-key.pem ec2-user@203.0.113.42</pre>
+      <p>A <b>security group</b> acts as the server's firewall &#8212; it decides which ports are open (for SSH you open port 22, and only to trusted addresses).</p>
+
+      <div class="note"><b>Golden rule about secrets:</b> access keys and <code>.pem</code> key files are like passwords. <b>Never</b> commit them to git or share them. Our <code>.gitignore</code> already blocks <code>*.pem</code> and <code>credentials</code> for exactly this reason.</div>
+
+      <div class="ref"><span class="rl">Reference</span> <b>AWS Cloud101</b> for IAM/console basics; the AWS CLI "getting started" docs for <code>aws configure</code>. SSH and the Linux terminal: your <i>Navigating Linux</i> PDF.</div>
+    </section>
+
+    <!-- ============ 4 · DOCKER ============ -->
+    <section id="s4" class="blk" style="--c:#E08A1E">
+      <h2><span class="bar"></span>Docker &amp; containers<span class="n">4</span></h2>
+      <p class="lead">Before Kubernetes can run our service, the service has to be packaged as a container. This is what Docker does.</p>
+
+      <div class="label">The problem it solves</div>
+      <p>Software depends on its surroundings &#8212; a specific language version, certain libraries, particular settings. Move it to another machine where those differ, and it breaks. This is the famous <b>"but it works on my machine"</b> problem.</p>
+
+      <div class="label">What a container is</div>
+      <p>A <b>container</b> packages your app <em>together with</em> everything it needs &#8212; runtime, libraries, config &#8212; into one sealed, isolated unit. That unit runs <b>identically</b> on your laptop, a colleague's machine, or a server in AWS, because it carries its whole environment with it.</p>
+      <div class="analogy"><b>An analogy:</b> a shipping container. Before them, loading a ship meant hand-stacking barrels, sacks and crates of every shape. The standard steel container changed everything: seal your goods inside one standard box, and any ship, crane, or truck in the world can handle it without caring what's inside. A software container does the same for programs.</div>
+
+      <div class="label">How it works</div>
+      <div class="viz">
+        <svg viewBox="0 0 760 150" role="img"><title>docker build flow</title>
+          <defs><marker id="ar4" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><polygon points="0 0,7 3,0 6" fill="#8a93a2"/></marker></defs>
+          <rect x="20" y="52" width="150" height="46" rx="8" fill="#fdf2e2" stroke="#E08A1E"/>
+          <text x="95" y="73" text-anchor="middle" font-size="12" font-weight="700" fill="#b5651d" font-family="sans-serif">Dockerfile</text>
+          <text x="95" y="88" text-anchor="middle" font-size="9.5" fill="#5c6675" font-family="sans-serif">the recipe</text>
+          <rect x="230" y="52" width="150" height="46" rx="8" fill="#fdf2e2" stroke="#E08A1E"/>
+          <text x="305" y="73" text-anchor="middle" font-size="12" font-weight="700" fill="#b5651d" font-family="sans-serif">Image</text>
+          <text x="305" y="88" text-anchor="middle" font-size="9.5" fill="#5c6675" font-family="sans-serif">frozen template</text>
+          <rect x="440" y="52" width="150" height="46" rx="8" fill="#fdf2e2" stroke="#E08A1E"/>
+          <text x="515" y="73" text-anchor="middle" font-size="12" font-weight="700" fill="#b5651d" font-family="sans-serif">Container</text>
+          <text x="515" y="88" text-anchor="middle" font-size="9.5" fill="#5c6675" font-family="sans-serif">running instance</text>
+          <rect x="620" y="52" width="120" height="46" rx="8" fill="#fff" stroke="#E08A1E" stroke-dasharray="4 3"/>
+          <text x="680" y="73" text-anchor="middle" font-size="11" font-weight="700" fill="#b5651d" font-family="sans-serif">Registry</text>
+          <text x="680" y="88" text-anchor="middle" font-size="9.5" fill="#5c6675" font-family="sans-serif">store / share</text>
+          <line x1="170" y1="75" x2="228" y2="75" stroke="#8a93a2" stroke-width="2" marker-end="url(#ar4)"/>
+          <text x="199" y="68" text-anchor="middle" font-size="9" fill="#5c6675" font-family="sans-serif">build</text>
+          <line x1="380" y1="75" x2="438" y2="75" stroke="#8a93a2" stroke-width="2" marker-end="url(#ar4)"/>
+          <text x="409" y="68" text-anchor="middle" font-size="9" fill="#5c6675" font-family="sans-serif">run</text>
+          <line x1="380" y1="90" x2="618" y2="90" stroke="#8a93a2" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#ar4)"/>
+          <text x="500" y="112" text-anchor="middle" font-size="9" fill="#8a93a2" font-family="sans-serif">push to store, pull anywhere</text>
+        </svg>
+        <div class="cap">Write a Dockerfile once &#8594; build an image &#8594; run as many containers as you like &#8594; store the image in a registry.</div>
+      </div>
+      <table class="cmp">
+        <tr><th>Term</th><th>What it is</th><th>Everyday analogy</th></tr>
+        <tr><td><b>Dockerfile</b></td><td>The written recipe: base, dependencies, your app</td><td>The recipe card</td></tr>
+        <tr><td><b>Image</b></td><td>The built, frozen template (made once)</td><td>The recipe, prepped and frozen</td></tr>
+        <tr><td><b>Container</b></td><td>A running instance of an image (run many)</td><td>The cooked dish on the plate</td></tr>
+        <tr><td><b>Registry</b></td><td>Where images are stored and shared (e.g. AWS ECR)</td><td>The freezer aisle</td></tr>
+      </table>
+
+      <div class="note"><b>Why this matters for us:</b> our Go control-plane will be shipped as a container image. Kubernetes only knows how to run containers &#8212; so containerizing the service is the bridge from "code on my laptop" to "running on the cluster". You already have Docker installed.</div>
+
+      <div class="ref"><span class="rl">Reference</span> The official <b>Docker "Get Started"</b> guide (docs.docker.com/get-started) &#8212; short and hands-on. No book in your library covers Docker directly, so we use the docs.</div>
+    </section>
+
+    <!-- ============ 5 · KUBERNETES ============ -->
+    <section id="s5" class="blk" style="--c:#1E9E6A">
+      <h2><span class="bar"></span>Kubernetes<span class="n">5</span></h2>
+      <p class="lead">You can run one container by hand. Running many, reliably, across many machines &#8212; that's what Kubernetes is for.</p>
+
+      <div class="label">The problem it solves</div>
+      <p>A single container on one laptop is easy. But a real system needs much more: <b>many copies</b> of a service to handle load, <b>automatic restart</b> when one crashes, <b>rolling updates</b> with no downtime, <b>spreading</b> across machines so one failure doesn't take everything down, and <b>networking</b> so the pieces can find each other. Doing all that by hand, around the clock, is impossible.</p>
+
+      <div class="label">What Kubernetes is</div>
+      <p><b>Kubernetes</b> (often written "K8s") is a system that <b>runs and manages containers across a group of machines automatically</b>. Its trick is <b>desired state</b>: you <em>declare</em> what you want ("keep 3 copies of my app running"), and Kubernetes continuously works to make reality match &#8212; restarting, rescheduling, and healing on its own.</p>
+      <div class="analogy"><b>An analogy:</b> if containers are standardized shipping boxes, Kubernetes is the fully automated port &#8212; the cranes, the scheduling, the tracking system &#8212; that decides which ship carries which box, reloads instantly if one falls, and keeps the whole harbour flowing without a human directing each crane.</div>
+
+      <div class="label">How it works &#8212; the core objects</div>
+      <table class="cmp">
+        <tr><th>Object</th><th>What it is</th></tr>
+        <tr><td><b>Pod</b></td><td>The smallest unit &#8212; one (or a few tightly-linked) containers running together. Pods are disposable; they come and go.</td></tr>
+        <tr><td><b>Deployment</b></td><td>Manages Pods for you: "keep 3 replicas alive, and roll out new versions safely."</td></tr>
+        <tr><td><b>Service</b></td><td>A stable network address in front of a changing set of Pods (individual Pod IPs change; the Service stays put).</td></tr>
+        <tr><td><b>Namespace</b></td><td>A boundary to isolate and group resources &#8212; for example, one per team or per tenant.</td></tr>
+      </table>
+      <p>You talk to Kubernetes with a command-line tool called <code>kubectl</code>, usually by giving it <b>YAML files</b> that describe the desired state. In Milestone 2 you'll run a small cluster on your own laptop for free using a tool called <b>kind</b>, and deploy your first Pod.</p>
+
+      <div class="note"><b>Where AWS comes back in:</b> running the Kubernetes "brain" (its control plane) yourself is fiddly. <b>EKS</b> is AWS's managed Kubernetes &#8212; AWS runs that brain for you, and you just add worker machines and deploy. That's our Milestone 3.</div>
+
+      <div class="ref"><span class="rl">Reference</span> <b>kubernetes.io/docs/concepts</b> &#8212; read "Pods", "Deployments", and "Services". This is the one area with no book on your shelf, so the official docs are the reference (they're excellent).</div>
+    </section>
+
+    <!-- ============ 6 · LLM & AGENTS ============ -->
+    <section id="s6" class="blk" style="--c:#7A4FBF">
+      <h2><span class="bar"></span>LLMs &amp; AI agents<span class="n">6</span></h2>
+      <p class="lead">This is your differentiator &#8212; the part most infra candidates don't have. Let's ground it from first principles.</p>
+
+      <div class="label">What an LLM is</div>
+      <p>An <b>LLM</b> (Large Language Model) does one core thing: given some text, it <b>predicts the next chunk of text</b>, over and over, until it decides to stop. That chunk is called a <b>token</b> &#8212; roughly three-quarters of a word (the word "Kubernetes" is about three or four tokens). Everything you send in and everything it sends back is counted in tokens &#8212; and tokens are what you pay for.</p>
+      <div class="viz">
+        <svg viewBox="0 0 640 130" role="img"><title>token flow</title>
+          <defs><marker id="ar6" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><polygon points="0 0,7 3,0 6" fill="#8a93a2"/></marker></defs>
+          <rect x="24" y="40" width="180" height="52" rx="9" fill="#efe9fb" stroke="#7A4FBF"/>
+          <text x="114" y="62" text-anchor="middle" font-size="12" font-weight="700" fill="#5b3aa0" font-family="sans-serif">input (your text)</text>
+          <text x="114" y="80" text-anchor="middle" font-size="10" fill="#5c6675" font-family="sans-serif">"Pod crashed: OOMKilled"</text>
+          <rect x="256" y="32" width="120" height="68" rx="10" fill="#7A4FBF" fill-opacity="0.14" stroke="#7A4FBF" stroke-width="1.8"/>
+          <text x="316" y="62" text-anchor="middle" font-size="13" font-weight="800" fill="#5b3aa0" font-family="sans-serif">LLM</text>
+          <text x="316" y="80" text-anchor="middle" font-size="9" fill="#5c6675" font-family="sans-serif">predict next token &#215;N</text>
+          <rect x="428" y="40" width="188" height="52" rx="9" fill="#efe9fb" stroke="#7A4FBF"/>
+          <text x="522" y="62" text-anchor="middle" font-size="12" font-weight="700" fill="#5b3aa0" font-family="sans-serif">output (its text)</text>
+          <text x="522" y="80" text-anchor="middle" font-size="10" fill="#5c6675" font-family="sans-serif">"Out of memory; raise limits"</text>
+          <line x1="204" y1="66" x2="254" y2="66" stroke="#8a93a2" stroke-width="2" marker-end="url(#ar6)"/>
+          <line x1="376" y1="66" x2="426" y2="66" stroke="#8a93a2" stroke-width="2" marker-end="url(#ar6)"/>
+        </svg>
+        <div class="cap">Tokens in, tokens out. You talk to it over a simple HTTP API, sending a list of messages.</div>
+      </div>
+
+      <div class="label">What turns an LLM into an "agent"</div>
+      <p>A plain LLM just talks. An <b>agent</b> is an LLM that can <b>use tools</b> in a loop. You hand it a set of tools (functions it may request &#8212; "read these logs", "fetch this metric"). It cannot run anything itself; instead it <b>asks you</b> to run a tool, <b>your code runs it</b>, and you feed the result back. It keeps going until the task is done.</p>
+      <div class="viz">
+        <svg viewBox="0 0 660 170" role="img"><title>agent loop</title>
+          <defs><marker id="ar6b" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><polygon points="0 0,7 3,0 6" fill="#8a93a2"/></marker></defs>
+          <rect x="30" y="62" width="150" height="48" rx="9" fill="#efe9fb" stroke="#7A4FBF"/>
+          <text x="105" y="83" text-anchor="middle" font-size="11.5" font-weight="800" fill="#5b3aa0" font-family="sans-serif">1 &#183; you ask</text>
+          <text x="105" y="99" text-anchor="middle" font-size="9" fill="#5c6675" font-family="sans-serif">"why did pod X fail?"</text>
+          <rect x="255" y="30" width="150" height="48" rx="9" fill="#7A4FBF" fill-opacity="0.14" stroke="#7A4FBF" stroke-width="1.8"/>
+          <text x="330" y="51" text-anchor="middle" font-size="11.5" font-weight="800" fill="#5b3aa0" font-family="sans-serif">2 &#183; model asks</text>
+          <text x="330" y="67" text-anchor="middle" font-size="9" fill="#5c6675" font-family="sans-serif">"call read_logs(X)"</text>
+          <rect x="480" y="62" width="150" height="48" rx="9" fill="#eef6ef" stroke="#1E9E6A"/>
+          <text x="555" y="83" text-anchor="middle" font-size="11.5" font-weight="800" fill="#16663c" font-family="sans-serif">3 &#183; YOUR code runs it</text>
+          <text x="555" y="99" text-anchor="middle" font-size="9" fill="#5c6675" font-family="sans-serif">fetches the logs</text>
+          <rect x="255" y="112" width="150" height="48" rx="9" fill="#7A4FBF" fill-opacity="0.14" stroke="#7A4FBF" stroke-width="1.8"/>
+          <text x="330" y="133" text-anchor="middle" font-size="11.5" font-weight="800" fill="#5b3aa0" font-family="sans-serif">4 &#183; model answers</text>
+          <text x="330" y="149" text-anchor="middle" font-size="9" fill="#5c6675" font-family="sans-serif">plain-English diagnosis</text>
+          <line x1="180" y1="80" x2="253" y2="60" stroke="#8a93a2" stroke-width="2" marker-end="url(#ar6b)"/>
+          <line x1="405" y1="60" x2="478" y2="80" stroke="#8a93a2" stroke-width="2" marker-end="url(#ar6b)"/>
+          <line x1="500" y1="110" x2="405" y2="132" stroke="#8a93a2" stroke-width="2" marker-end="url(#ar6b)"/>
+          <text x="470" y="150" font-size="9" fill="#8a93a2" font-family="sans-serif">result fed back</text>
+        </svg>
+        <div class="cap">The model decides <i>what</i> to do; your code decides <i>whether and how</i> to do it. That control point is where safety lives.</div>
+      </div>
+
+      <div class="label">Why it belongs in this project</div>
+      <p>When a service breaks, a human normally reads pages of logs and metrics to figure out what happened. An agent can read those raw signals and hand back a clear "<em>this is what broke, this is the likely cause, this is what to try</em>" &#8212; shrinking the time from "alarm goes off" to "human understands the problem". That is directly what an observability-platform team values.</p>
+
+      <div class="note"><b>Safety, from day one:</b> in the early milestones the agent only <b>reads and explains</b> &#8212; it changes nothing. Any power to actually <em>act</em> comes much later, and only behind a human-approval step with a full audit log. Read-only first is the safe path.</div>
+
+      <div class="ref"><span class="rl">Reference</span> <b>Raschka</b>, <i>Build a Large Language Model (From Scratch)</i>, Chapter&#160;1 and the start of Chapter&#160;2 (what a token is). <b>Hands-on LLM</b> for the agent/tool-use idea.</div>
+    </section>
+
+    <!-- ============ 7 · FITS TOGETHER ============ -->
+    <section id="s7" class="blk" style="--c:#C2185B">
+      <h2><span class="bar"></span>How it all fits together<span class="n">7</span></h2>
+      <p class="lead">Now let's connect the pieces you just met into one clear story.</p>
+
+      <p>Follow one service on its journey through Sentinel:</p>
+      <ul class="pts" style="--c:#C2185B">
+        <li><b>Go</b> &#8212; you write the control-plane API in Go, because that's the language of cloud infrastructure and it compiles to a tiny, fast binary.</li>
+        <li><b>Docker</b> &#8212; you package that Go binary into a container image, so it runs the same everywhere.</li>
+        <li><b>AWS</b> &#8212; you rent the machines to run it on, using IAM for access and Terraform to build the infrastructure.</li>
+        <li><b>Kubernetes (EKS)</b> &#8212; AWS's managed Kubernetes runs your container reliably: many copies, auto-restart, safe updates.</li>
+        <li><b>Observability</b> &#8212; Prometheus and Grafana watch the running service's metrics and logs.</li>
+        <li><b>The AI agent</b> (Python) &#8212; reads those signals and turns them into a plain-English diagnosis, with a human in the loop.</li>
+      </ul>
+
+      <p>Each Day 1 topic is one link in that chain. You don't need to master all of them today &#8212; you need the <b>map</b>, so that when we build each piece, you know exactly <em>where it sits and why it's there</em>. That's the whole point of a foundations day.</p>
+
+      <div class="analogy" style="--c:#C2185B"><b>The one-line summary:</b> we write a service in <b>Go</b>, box it with <b>Docker</b>, run it on <b>AWS</b> via <b>Kubernetes</b>, watch it with <b>observability</b> tools, and let an <b>AI agent</b> explain it when it breaks.</div>
+    </section>
+
+    <!-- ============ 8 · TEST ============ -->
+    <section id="s8" class="blk test" style="--c:#7A4FBF">
+      <h2><span class="bar"></span>Test yourself<span class="n">8</span></h2>
+      <p class="lead">Answer each in your own words first. If you can't, that section is worth re-reading &#8212; that's the signal we're looking for.</p>
+
+      <div class="qitem"><div class="qq"><b>Q1</b> In one or two sentences, what is Sentinel and who is it for?</div>
+        <button class="reveal">Reveal</button><div class="ans">A self-service platform that lets a developer deploy a service with one request; it runs the service on Kubernetes, watches its health, and uses an AI agent to explain problems and suggest fixes. It's built to demonstrate infra + observability + AI skills for a platform-engineering role.</div></div>
+
+      <div class="qitem"><div class="qq"><b>Q2</b> We already know Python. Give two concrete reasons we're using Go for the control-plane service.</div>
+        <button class="reveal">Reveal</button><div class="ans">Any two of: (1) Go is the language of cloud infra &#8212; Kubernetes, Docker, Terraform, Prometheus, Grafana are all written in it; (2) it compiles to one tiny self-contained binary, ideal for small, fast-starting containers; (3) concurrency is built in, perfect for a server handling many requests; (4) static typing catches bugs at compile time.</div></div>
+
+      <div class="qitem"><div class="qq"><b>Q3</b> What is "the cloud" in plain terms, and what does IAM control?</div>
+        <button class="reveal">Reveal</button><div class="ans">The cloud is renting someone else's computers over the internet, paying for what you use. <b>IAM</b> (Identity and Access Management) controls <b>who is allowed to do what</b> in AWS &#8212; identities and their permissions. Use least privilege; avoid the root user for daily work.</div></div>
+
+      <div class="qitem"><div class="qq"><b>Q4</b> Name the three ways to interact with AWS, and how you get into an actual EC2 server's terminal.</div>
+        <button class="reveal">Reveal</button><div class="ans">Web Console (click), AWS CLI (<code>aws ...</code> commands), and Terraform (infrastructure as code). You reach a server's terminal with <b>SSH</b> using a private key: <code>ssh -i key.pem ec2-user@&lt;ip&gt;</code>, with port 22 opened by its security group.</div></div>
+
+      <div class="qitem"><div class="qq"><b>Q5</b> What's the difference between a Docker <em>image</em> and a <em>container</em>? What problem do containers solve?</div>
+        <button class="reveal">Reveal</button><div class="ans">An <b>image</b> is the frozen template, built once; a <b>container</b> is a running instance of it (you can run many). Containers solve the "works on my machine" problem by bundling the app with its whole environment so it runs identically everywhere.</div></div>
+
+      <div class="qitem"><div class="qq"><b>Q6</b> Why do we need Kubernetes if we can already run a container? Give two things it does for us.</div>
+        <button class="reveal">Reveal</button><div class="ans">Running one container is easy; running many reliably is not. Kubernetes automates it: any two of &#8212; keep N replicas alive, auto-restart on crash, roll out new versions safely, spread across machines, and provide stable networking. You declare the desired state; it maintains it.</div></div>
+
+      <div class="qitem"><div class="qq"><b>Q7</b> What makes an LLM an "agent", and who actually executes a tool when the agent wants to use one?</div>
+        <button class="reveal">Reveal</button><div class="ans">An agent is an LLM that can use <b>tools in a loop</b>. When it wants a tool, it only <b>asks</b> &#8212; <b>your code executes it</b> and feeds the result back. That control point is where logging, approval, and safety live.</div></div>
+    </section>
+
+  </div>
+  </main>
+</div>
+
+<script>
+  // active section highlight in sidebar
+  const links = [...document.querySelectorAll('.side a.navitem')];
+  const secs  = links.map(a => document.querySelector(a.getAttribute('href')));
+  function onScroll(){
+    let idx = 0;
+    const y = window.scrollY + 120;
+    secs.forEach((s,i)=>{ if (s && s.offsetTop <= y) idx = i; });
+    links.forEach(l=>l.classList.remove('active'));
+    links[idx].classList.add('active');
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  // reveal answers
+  document.querySelectorAll('.reveal').forEach(b => b.addEventListener('click', () => {
+    const ans = b.nextElementSibling;
+    ans.classList.toggle('show');
+    b.textContent = ans.classList.contains('show') ? 'Hide' : 'Reveal';
+  }));
+</script>
+</body>
+</html>

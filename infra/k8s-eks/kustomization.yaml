@@ -1,0 +1,7 @@
+# EKS overlay: same base as kind, plus ingress. `make eks-deploy` rewrites the
+# ghcr.io/mahesh-sadupalli/ image prefix to the ECR registry from terraform output.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../k8s
+  - ingress.yaml

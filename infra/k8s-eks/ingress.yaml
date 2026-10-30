@@ -1,0 +1,31 @@
+# Exposed through ingress-nginx, which sits behind one AWS Network Load Balancer.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: control-plane
+  namespace: sentinel-system
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /deployments
+            pathType: Prefix
+            backend:
+              service: {name: control-plane, port: {number: 80}}
+---
+# The hello Service itself is created by the control-plane on first deploy.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello
+  namespace: team-a
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: {name: hello, port: {number: 80}}

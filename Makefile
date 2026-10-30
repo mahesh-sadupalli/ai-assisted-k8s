@@ -26,3 +26,13 @@ up: cluster deploy
 
 down:
 	kind delete cluster --name $(CLUSTER)
+
+observability:
+	helm repo add prometheus-community https://prometheus-community.github.io/helm-charts >/dev/null
+	helm repo update prometheus-community >/dev/null
+	helm upgrade --install kps prometheus-community/kube-prometheus-stack -n monitoring --create-namespace \
+	  -f observability/prometheus/values.yaml --wait --timeout 10m
+	kubectl apply -f observability/prometheus/servicemonitor.yaml
+	kubectl -n monitoring create configmap sentinel-red-dashboard \
+	  --from-file=observability/grafana/red-dashboard.json --dry-run=client -o yaml \
+	  | kubectl label --local -f - grafana_dashboard=1 -o yaml | kubectl apply -f -

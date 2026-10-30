@@ -1,0 +1,23 @@
+# kube-prometheus-stack, trimmed for a laptop kind cluster.
+alertmanager:
+  enabled: false        # turned on at M5 for SLO burn-rate alerts
+prometheus:
+  prometheusSpec:
+    # pick up every ServiceMonitor/PrometheusRule, not just ones labelled for this release
+    serviceMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    scrapeInterval: 15s
+    retention: 2d
+    resources:
+      requests: {cpu: 100m, memory: 400Mi}
+grafana:
+  adminPassword: sentinel
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL
+kubeEtcd: {enabled: false}
+kubeControllerManager: {enabled: false}
+kubeScheduler: {enabled: false}
+kubeProxy: {enabled: false}

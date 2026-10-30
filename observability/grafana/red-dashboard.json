@@ -1,0 +1,35 @@
+{
+  "title": "Sentinel control-plane — RED",
+  "uid": "sentinel-red",
+  "schemaVersion": 39,
+  "time": {"from": "now-30m", "to": "now"},
+  "refresh": "15s",
+  "panels": [
+    {
+      "type": "timeseries", "title": "Rate (req/s by route)",
+      "gridPos": {"x": 0, "y": 0, "w": 8, "h": 8},
+      "targets": [{"expr": "sum by (route) (rate(http_requests_total{route!=\"GET /metrics\"}[1m]))", "legendFormat": "{{route}}"}]
+    },
+    {
+      "type": "timeseries", "title": "Errors (5xx ratio)",
+      "gridPos": {"x": 8, "y": 0, "w": 8, "h": 8},
+      "fieldConfig": {"defaults": {"unit": "percentunit"}},
+      "targets": [{"expr": "sum(rate(http_requests_total{code=~\"5..\"}[1m])) / clamp_min(sum(rate(http_requests_total{route!=\"GET /metrics\"}[1m])), 1e-9)", "legendFormat": "5xx ratio"}]
+    },
+    {
+      "type": "timeseries", "title": "Duration (p50 / p95 / p99)",
+      "gridPos": {"x": 16, "y": 0, "w": 8, "h": 8},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {"expr": "histogram_quantile(0.50, sum by (le) (rate(http_request_duration_seconds_bucket{route!=\"GET /metrics\"}[5m])))", "legendFormat": "p50"},
+        {"expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{route!=\"GET /metrics\"}[5m])))", "legendFormat": "p95"},
+        {"expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{route!=\"GET /metrics\"}[5m])))", "legendFormat": "p99"}
+      ]
+    },
+    {
+      "type": "timeseries", "title": "Guardrail outcomes (by status code)",
+      "gridPos": {"x": 0, "y": 8, "w": 24, "h": 7},
+      "targets": [{"expr": "sum by (code) (rate(http_requests_total{route=\"POST /deployments\"}[1m]))", "legendFormat": "{{code}}"}]
+    }
+  ]
+}

@@ -1,6 +1,23 @@
 # kube-prometheus-stack, trimmed for a laptop kind cluster.
+# M5: only SLO alerts go to the Sentinel agent; everything else is dropped on kind.
 alertmanager:
-  enabled: false        # turned on at M5 for SLO burn-rate alerts
+  enabled: true
+  config:
+    route:
+      receiver: "null"
+      group_by: [alertname]
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 1h
+      routes:
+        - matchers: ['slo=~".+"']
+          receiver: sentinel-agent
+    receivers:
+      - name: "null"
+      - name: sentinel-agent
+        webhook_configs:
+          - url: http://sentinel-agent.sentinel-system/alerts
+            send_resolved: true
 prometheus:
   prometheusSpec:
     # pick up every ServiceMonitor/PrometheusRule, not just ones labelled for this release
@@ -12,6 +29,10 @@ prometheus:
       requests: {cpu: 100m, memory: 400Mi}
 grafana:
   adminPassword: sentinel
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      url: http://loki.monitoring:3100
   sidecar:
     dashboards:
       enabled: true

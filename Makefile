@@ -33,6 +33,12 @@ observability:
 	helm upgrade --install kps prometheus-community/kube-prometheus-stack -n monitoring --create-namespace \
 	  -f observability/prometheus/values.yaml --wait --timeout 10m
 	kubectl apply -f observability/prometheus/servicemonitor.yaml
+	{ printf 'apiVersion: monitoring.coreos.com/v1\nkind: PrometheusRule\nmetadata:\n  name: sentinel-slo\n  namespace: monitoring\nspec:\n'; \
+	  sed 's/^/  /' observability/slo/rules.yaml; } | kubectl apply -f -
+	helm repo add grafana https://grafana.github.io/helm-charts >/dev/null
+	helm repo update grafana >/dev/null
+	helm upgrade --install loki grafana/loki -n monitoring -f observability/loki/values.yaml --wait --timeout 10m
+	helm upgrade --install alloy grafana/alloy -n monitoring -f observability/loki/alloy-values.yaml --wait
 	kubectl -n monitoring create configmap sentinel-red-dashboard \
 	  --from-file=observability/grafana/red-dashboard.json --dry-run=client -o yaml \
 	  | kubectl label --local -f - grafana_dashboard=1 -o yaml | kubectl apply -f -

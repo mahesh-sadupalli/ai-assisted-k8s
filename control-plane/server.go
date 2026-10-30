@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Applier rolls an accepted deployment out to a cluster. Nil means "record only" (M1 mode).
@@ -33,7 +35,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	})
-	return mux
+	mux.Handle("GET /metrics", promhttp.Handler())
+	return instrument(mux)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

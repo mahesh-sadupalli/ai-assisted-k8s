@@ -120,3 +120,19 @@ func TestCreateApplies(t *testing.T) {
 		})
 	}
 }
+
+func TestMetrics(t *testing.T) {
+	ts := newTestServer()
+	defer ts.Close()
+	post(t, ts, goodBody)
+	resp, err := http.Get(ts.URL + "/metrics")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	want := `http_requests_total{code="201",method="POST",route="POST /deployments"}`
+	if !strings.Contains(string(body), want) {
+		t.Fatalf("metrics missing %s", want)
+	}
+}

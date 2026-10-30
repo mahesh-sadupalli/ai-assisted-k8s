@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/anthropics/anthropic-sdk-go"
@@ -41,28 +40,38 @@ const systemPrompt = `You are an experienced Site Reliability Engineer.
 Diagnose the Kubernetes problem in the logs or state you are given.
 Always answer by calling the report_diagnosis tool.`
 
-// Diagnose sends evidence (logs, pod state) to Claude and returns its structured diagnosis.
-func Diagnose(ctx context.Context, client anthropic.Client, evidence string) (Diagnosis, error) {
+// callTool sends one user message and returns the raw JSON input of the named tool call.
+// Every agent capability is this shape: evidence in, schema-checked tool input out.
+func callTool(ctx context.Context, client anthropic.Client, system string, tool anthropic.ToolParam, user string) (string, error) {
 	resp, err := client.Messages.New(ctx, anthropic.MessageNewParams{
 		Model:        model,
 		MaxTokens:    16000,
 		OutputConfig: anthropic.OutputConfigParam{Effort: anthropic.OutputConfigEffortLow},
-		System:       []anthropic.TextBlockParam{{Text: systemPrompt}},
-		Tools:        []anthropic.ToolUnionParam{{OfTool: &reportTool}},
-		Messages:     []anthropic.MessageParam{anthropic.NewUserMessage(anthropic.NewTextBlock(evidence))},
+		System:       []anthropic.TextBlockParam{{Text: system}},
+		Tools:        []anthropic.ToolUnionParam{{OfTool: &tool}},
+		Messages:     []anthropic.MessageParam{anthropic.NewUserMessage(anthropic.NewTextBlock(user))},
 	})
+	if err != nil {
+		return "", err
+	}
+	if resp.StopReason == anthropic.StopReasonRefusal {
+		return "", fmt.Errorf("model refused: %s", resp.StopDetails.Explanation)
+	}
+	for _, block := range resp.Content {
+		if tu, ok := block.AsAny().(anthropic.ToolUseBlock); ok && tu.Name == tool.Name {
+			return tu.JSON.Input.Raw(), nil
+		}
+	}
+	return "", fmt.Errorf("model did not call %s", tool.Name)
+}
+
+// Diagnose sends evidence (logs, pod state) to Claude and returns its structured diagnosis.
+func Diagnose(ctx context.Context, client anthropic.Client, evidence string) (Diagnosis, error) {
+	raw, err := callTool(ctx, client, systemPrompt, reportTool, evidence)
 	if err != nil {
 		return Diagnosis{}, err
 	}
-	if resp.StopReason == anthropic.StopReasonRefusal {
-		return Diagnosis{}, fmt.Errorf("model refused: %s", resp.StopDetails.Explanation)
-	}
-	for _, block := range resp.Content {
-		if tu, ok := block.AsAny().(anthropic.ToolUseBlock); ok && tu.Name == reportTool.Name {
-			return parseDiagnosis(tu.JSON.Input.Raw())
-		}
-	}
-	return Diagnosis{}, errors.New("model did not call report_diagnosis")
+	return parseDiagnosis(raw)
 }
 
 func parseDiagnosis(raw string) (Diagnosis, error) {

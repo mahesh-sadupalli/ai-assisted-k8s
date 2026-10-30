@@ -2,7 +2,7 @@ REGISTRY ?= ghcr.io/mahesh-sadupalli
 TAG      ?= dev
 CLUSTER  ?= sentinel
 
-.PHONY: test cluster images load deploy observability up down eks-up eks-push eks-deploy eks-destroy
+.PHONY: test cluster images load deploy agent-secret observability up down eks-up eks-push eks-deploy eks-destroy
 
 test:
 	go test -race ./...
@@ -13,14 +13,24 @@ cluster:
 images:
 	docker build --build-arg CMD=control-plane  -t $(REGISTRY)/control-plane:$(TAG) .
 	docker build --build-arg CMD=services/hello -t $(REGISTRY)/hello:$(TAG) .
+	docker build --build-arg CMD=agent          -t $(REGISTRY)/agent:$(TAG) .
 
 load: images
-	kind load docker-image --name $(CLUSTER) $(REGISTRY)/control-plane:$(TAG) $(REGISTRY)/hello:$(TAG)
+	kind load docker-image --name $(CLUSTER) $(REGISTRY)/control-plane:$(TAG) $(REGISTRY)/hello:$(TAG) $(REGISTRY)/agent:$(TAG)
 
 deploy: load
 	kubectl apply -k infra/k8s
-	kubectl -n sentinel-system rollout restart deployment/control-plane
+	$(MAKE) agent-secret
+	kubectl -n sentinel-system rollout restart deployment/control-plane deployment/sentinel-agent
 	kubectl -n sentinel-system rollout status deployment/control-plane --timeout=120s
+	kubectl -n sentinel-system rollout status deployment/sentinel-agent --timeout=120s
+
+# The agent's Claude key comes from your local .env; it never goes into git or the manifests.
+agent-secret:
+	@set -a; . ./.env; set +a; \
+	kubectl -n sentinel-system create secret generic sentinel-agent-anthropic \
+	  --from-literal=ANTHROPIC_API_KEY="$$ANTHROPIC_API_KEY" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+	@echo "secret sentinel-agent-anthropic updated"
 
 up: cluster deploy
 

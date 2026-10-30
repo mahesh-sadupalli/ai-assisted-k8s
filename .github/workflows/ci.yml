@@ -31,6 +31,17 @@ jobs:
       - run: terraform -chdir=infra/terraform init -backend=false -input=false
       - run: terraform -chdir=infra/terraform validate
 
+  slo-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: promtool check + unit tests
+        run: |
+          docker run --rm -v "$PWD/observability/slo:/slo" -w /slo --entrypoint promtool \
+            prom/prometheus:v3.5.0 check rules rules.yaml
+          docker run --rm -v "$PWD/observability/slo:/slo" -w /slo --entrypoint promtool \
+            prom/prometheus:v3.5.0 test rules rules_test.yaml
+
   images:
     runs-on: ubuntu-latest
     strategy:

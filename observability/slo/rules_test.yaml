@@ -1,0 +1,47 @@
+# promtool test rules observability/slo/rules_test.yaml
+rule_files: [rules.yaml]
+evaluation_interval: 1m
+tests:
+  - name: total outage pages within minutes
+    interval: 1m
+    input_series:
+      # 60 req/min, all 502 from minute 0
+      - series: 'http_requests_total{job="control-plane",route="POST /deployments",code="502"}'
+        values: '0+60x30'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: SentinelAPIErrorBudgetBurnFast
+        exp_alerts:
+          - exp_labels: {severity: page, slo: control-plane-availability, service: control-plane, namespace: sentinel-system}
+            exp_annotations:
+              summary: control-plane is burning its 30-day error budget 14x too fast
+              description: 'error ratio 1h=100% (SLO 99.9%)'
+
+  - name: errors inside budget do not page
+    interval: 1m
+    input_series:
+      # 0.05% errors: half the budget rate
+      - series: 'http_requests_total{job="control-plane",route="POST /deployments",code="201"}'
+        values: '0+1999x90'
+      - series: 'http_requests_total{job="control-plane",route="POST /deployments",code="502"}'
+        values: '0+1x90'
+    alert_rule_test:
+      - eval_time: 90m
+        alertname: SentinelAPIErrorBudgetBurnFast
+        exp_alerts: []
+      - eval_time: 90m
+        alertname: SentinelAPIErrorBudgetBurnMedium
+        exp_alerts: []
+
+  - name: a short blip does not page (long window not breached)
+    interval: 1m
+    input_series:
+      # 1000 good req/min for an hour, then 1 minute of 50% errors
+      - series: 'http_requests_total{job="control-plane",route="POST /deployments",code="201"}'
+        values: '0+1000x61 61500+500x5'
+      - series: 'http_requests_total{job="control-plane",route="POST /deployments",code="502"}'
+        values: '0x61 500x5'
+    alert_rule_test:
+      - eval_time: 66m
+        alertname: SentinelAPIErrorBudgetBurnFast
+        exp_alerts: []

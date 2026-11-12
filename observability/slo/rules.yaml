@@ -1,0 +1,41 @@
+# SLO: 99.9% of control-plane API requests succeed (non-5xx), over 30 days.
+# Error budget = 0.1%. Multi-window, multi-burn-rate alerts (Google SRE workbook, ch. 5):
+# each alert needs a long window (is it significant?) AND a short window (is it still happening?).
+groups:
+  - name: sentinel-slo-recording
+    rules:
+      - record: sentinel:api_error_ratio:rate5m
+        expr: sum(rate(http_requests_total{job="control-plane",route=~"(POST|GET) /deployments.*",code=~"5.."}[5m])) / sum(rate(http_requests_total{job="control-plane",route=~"(POST|GET) /deployments.*"}[5m]))
+      - record: sentinel:api_error_ratio:rate30m
+        expr: sum(rate(http_requests_total{job="control-plane",route=~"(POST|GET) /deployments.*",code=~"5.."}[30m])) / sum(rate(http_requests_total{job="control-plane",route=~"(POST|GET) /deployments.*"}[30m]))
+      - record: sentinel:api_error_ratio:rate1h
+        expr: sum(rate(http_requests_total{job="control-plane",route=~"(POST|GET) /deployments.*",code=~"5.."}[1h])) / sum(rate(http_requests_total{job="control-plane",route=~"(POST|GET) /deployments.*"}[1h]))
+      - record: sentinel:api_error_ratio:rate6h
+        expr: sum(rate(http_requests_total{job="control-plane",route=~"(POST|GET) /deployments.*",code=~"5.."}[6h])) / sum(rate(http_requests_total{job="control-plane",route=~"(POST|GET) /deployments.*"}[6h]))
+      - record: sentinel:api_error_ratio:rate3d
+        expr: sum(rate(http_requests_total{job="control-plane",route=~"(POST|GET) /deployments.*",code=~"5.."}[3d])) / sum(rate(http_requests_total{job="control-plane",route=~"(POST|GET) /deployments.*"}[3d]))
+
+  - name: sentinel-slo-alerts
+    rules:
+      # 14.4x burn: 2% of the 30-day budget gone in 1h. Page.
+      - alert: SentinelAPIErrorBudgetBurnFast
+        expr: sentinel:api_error_ratio:rate1h > (14.4 * 0.001) and sentinel:api_error_ratio:rate5m > (14.4 * 0.001)
+        for: 2m
+        labels: {severity: page, slo: control-plane-availability, service: control-plane, namespace: sentinel-system}
+        annotations:
+          summary: control-plane is burning its 30-day error budget 14x too fast
+          description: 'error ratio 1h={{ $value | humanizePercentage }} (SLO 99.9%)'
+      # 6x burn: 5% of the budget in 6h. Page.
+      - alert: SentinelAPIErrorBudgetBurnMedium
+        expr: sentinel:api_error_ratio:rate6h > (6 * 0.001) and sentinel:api_error_ratio:rate30m > (6 * 0.001)
+        for: 15m
+        labels: {severity: page, slo: control-plane-availability, service: control-plane, namespace: sentinel-system}
+        annotations:
+          summary: control-plane is burning its error budget 6x too fast
+      # 1x burn over 3 days: on track to miss the SLO. Ticket, not page.
+      - alert: SentinelAPIErrorBudgetBurnSlow
+        expr: sentinel:api_error_ratio:rate3d > 0.001 and sentinel:api_error_ratio:rate6h > 0.001
+        for: 1h
+        labels: {severity: ticket, slo: control-plane-availability, service: control-plane, namespace: sentinel-system}
+        annotations:
+          summary: control-plane will miss its 99.9% SLO at the current error rate

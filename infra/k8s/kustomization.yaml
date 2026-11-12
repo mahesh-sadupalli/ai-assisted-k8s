@@ -4,3 +4,4 @@ resources:
   - namespaces.yaml
   - control-plane-rbac.yaml
   - control-plane.yaml
+  - agent.yaml

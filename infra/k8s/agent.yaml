@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sentinel-agent
+  namespace: sentinel-system
+---
+# What the agent may touch. Bound per namespace (below), so it only applies inside the
+# remediation allowlist: sentinel-system and team-a. It cannot delete anything.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sentinel-agent
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "events"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "update"]
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale"]
+    verbs: ["get", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sentinel-agent
+  namespace: sentinel-system
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: sentinel-agent}
+subjects: [{kind: ServiceAccount, name: sentinel-agent, namespace: sentinel-system}]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sentinel-agent
+  namespace: team-a
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: sentinel-agent}
+subjects: [{kind: ServiceAccount, name: sentinel-agent, namespace: sentinel-system}]
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sentinel-agent-audit
+  namespace: sentinel-system
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: {storage: 100Mi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentinel-agent
+  namespace: sentinel-system
+  labels: {app: sentinel-agent}
+spec:
+  replicas: 1 # one writer for the audit log
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: sentinel-agent}
+  template:
+    metadata:
+      labels: {app: sentinel-agent}
+    spec:
+      serviceAccountName: sentinel-agent
+      securityContext: {fsGroup: 65532}
+      containers:
+        - name: agent
+          image: ghcr.io/mahesh-sadupalli/agent:dev
+          imagePullPolicy: IfNotPresent
+          args: ["serve"]
+          env:
+            - {name: AUDIT_LOG, value: /data/audit.jsonl}
+          envFrom:
+            - secretRef: {name: sentinel-agent-anthropic} # ANTHROPIC_API_KEY, created by `make agent-secret`
+          ports:
+            - {name: http, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+          volumeMounts:
+            - {name: audit, mountPath: /data}
+          resources:
+            requests: {cpu: 50m, memory: 32Mi}
+            limits: {cpu: 500m, memory: 128Mi}
+      volumes:
+        - name: audit
+          persistentVolumeClaim: {claimName: sentinel-agent-audit}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentinel-agent
+  namespace: sentinel-system
+  labels: {app: sentinel-agent}
+spec:
+  selector: {app: sentinel-agent}
+  ports:
+    - {name: http, port: 80, targetPort: http}

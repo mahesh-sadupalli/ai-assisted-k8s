@@ -1,0 +1,29 @@
+# Steady deploy traffic against the control-plane (~2 req/s) so the SLO has something to measure.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadgen
+  namespace: sentinel-system
+  labels: {app: loadgen}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: loadgen}
+  template:
+    metadata:
+      labels: {app: loadgen}
+    spec:
+      containers:
+        - name: loadgen
+          image: curlimages/curl:8.17.0
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while true; do
+                curl -s -o /dev/null -X POST http://control-plane/deployments \
+                  -d '{"name":"hello","namespace":"team-a","image":"ghcr.io/mahesh-sadupalli/hello:dev","replicas":2,"resources":{"cpu_millis":250,"memory_mib":64}}'
+                sleep 0.5
+              done
+          resources:
+            requests: {cpu: 10m, memory: 8Mi}
+            limits: {cpu: 100m, memory: 32Mi}

@@ -2,7 +2,7 @@ REGISTRY ?= ghcr.io/mahesh-sadupalli
 TAG      ?= dev
 CLUSTER  ?= sentinel
 
-.PHONY: test cluster images load deploy observability up down eks-up eks-push eks-deploy eks-destroy
+.PHONY: test cluster images load deploy agent-secret observability up down eks-up eks-push eks-deploy eks-destroy
 
 test:
 	go test -race ./...
@@ -13,14 +13,24 @@ cluster:
 images:
 	docker build --build-arg CMD=control-plane  -t $(REGISTRY)/control-plane:$(TAG) .
 	docker build --build-arg CMD=services/hello -t $(REGISTRY)/hello:$(TAG) .
+	docker build --build-arg CMD=agent          -t $(REGISTRY)/agent:$(TAG) .
 
 load: images
-	kind load docker-image --name $(CLUSTER) $(REGISTRY)/control-plane:$(TAG) $(REGISTRY)/hello:$(TAG)
+	kind load docker-image --name $(CLUSTER) $(REGISTRY)/control-plane:$(TAG) $(REGISTRY)/hello:$(TAG) $(REGISTRY)/agent:$(TAG)
 
 deploy: load
 	kubectl apply -k infra/k8s
-	kubectl -n sentinel-system rollout restart deployment/control-plane
+	$(MAKE) agent-secret
+	kubectl -n sentinel-system rollout restart deployment/control-plane deployment/sentinel-agent
 	kubectl -n sentinel-system rollout status deployment/control-plane --timeout=120s
+	kubectl -n sentinel-system rollout status deployment/sentinel-agent --timeout=120s
+
+# The agent's Claude key comes from your local .env; it never goes into git or the manifests.
+agent-secret:
+	@set -a; . ./.env; set +a; \
+	kubectl -n sentinel-system create secret generic sentinel-agent-anthropic \
+	  --from-literal=ANTHROPIC_API_KEY="$$ANTHROPIC_API_KEY" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+	@echo "secret sentinel-agent-anthropic updated"
 
 up: cluster deploy
 
@@ -33,6 +43,12 @@ observability:
 	helm upgrade --install kps prometheus-community/kube-prometheus-stack -n monitoring --create-namespace \
 	  -f observability/prometheus/values.yaml --wait --timeout 10m
 	kubectl apply -f observability/prometheus/servicemonitor.yaml
+	{ printf 'apiVersion: monitoring.coreos.com/v1\nkind: PrometheusRule\nmetadata:\n  name: sentinel-slo\n  namespace: monitoring\nspec:\n'; \
+	  sed 's/^/  /' observability/slo/rules.yaml; } | kubectl apply -f -
+	helm repo add grafana https://grafana.github.io/helm-charts >/dev/null
+	helm repo update grafana >/dev/null
+	helm upgrade --install loki grafana/loki -n monitoring -f observability/loki/values.yaml --wait --timeout 10m
+	helm upgrade --install alloy grafana/alloy -n monitoring -f observability/loki/alloy-values.yaml --wait
 	kubectl -n monitoring create configmap sentinel-red-dashboard \
 	  --from-file=observability/grafana/red-dashboard.json --dry-run=client -o yaml \
 	  | kubectl label --local -f - grafana_dashboard=1 -o yaml | kubectl apply -f -
